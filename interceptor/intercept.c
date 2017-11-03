@@ -5,36 +5,15 @@
 #include <linux/device-mapper.h>
 
 #include "bitdriver.h"
-
 #include "logger.h"
 
 /* This is a structure which will store  information about the underlying device 
  * Param:
- * dev : underlying device
- * start:  Starting sector number of the device
  */
 struct dr_dm_target {
         struct dm_dev *dev;
         sector_t start;
 };
-
-/* This is map function of basic target. This function gets called whenever you get a new bio
- * request.The working of map function is to map a particular bio request to the underlying device. 
- * The request that we receive is submitted to out device so  bio->bi_bdev points to our device.
- * We should point to the bio-> bi_dev field to bdev of underlying device. Here in this function,
- * we can have other processing like changing sector number of bio request, splitting bio etc. 
- *
- *  Param : 
- *  ti : It is the dm_target structure representing our basic target
- *  bio : The block I/O request from upper layer
- *
- *: Return values from target map function:
- *  DM_MAPIO_SUBMITTED :  Your target has submitted the bio request to underlying request
- *  DM_MAPIO_REMAPPED  :  Bio request is remapped, Device mapper should submit bio.  
- *  DM_MAPIO_REQUEUE   :  Some problem has happened with the mapping of bio, So 
- *                                                re queue the bio request. So the bio will be submitted 
- *                                                to the map function  
- */
 
 #define IS_WRITE(x) op_is_write(bio_op(x))
 static int intercept_map(struct dm_target *ti, struct bio *bio)
@@ -75,13 +54,6 @@ static int intercept_map(struct dm_target *ti, struct bio *bio)
 }
 
 
-/* This is Constructor Function of basic target 
- *  Constructor gets called when we create some device of type 'intercept'.
- *  So it will get called when we execute command 'dmsetup create'
- *  This  function gets called for each device over which you want to create basic 
- *  target. Here it is just a basic target so it will take only one device so it  
- *  will get called once. 
- */
 static int 
 intercept_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
@@ -113,18 +85,6 @@ intercept_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
         mdt->start=(sector_t)start;
         
-
-        /* dm_get_table_mode 
-         * Gives out you the Permissions of device mapper table. 
-         * This table is nothing but the table which gets created
-         * when we execute dmsetup create. This is one of the
-         * Data structure used by device mapper for keeping track of its devices.
-         *
-         * dm_get_device 
-         * The function sets the mdt->dev field to underlying device dev structure.
-         */
-
-    
         if (dm_get_device(ti, argv[0], dm_table_get_mode(ti->table), &mdt->dev)) {
                 ti->error = "dm-intercept: Device lookup failed";
                 goto bad;
@@ -148,11 +108,6 @@ bad:
 
 
 
-/*
- * This is destruction function
- * This gets called when we remove a device of type basic target. The function gets 
- * called per device. 
- */
 static void intercept_dtr(struct dm_target *ti)
 {
         struct dr_dm_target *mdt = (struct dr_dm_target *) ti->private;
@@ -162,11 +117,6 @@ static void intercept_dtr(struct dm_target *ti)
         LOG_MSG(CRIT, "\n>>out function intercept_dtr \n");               
 }
 
-/*
-
- * This structure is fops for basic target.
-
- */
 static struct target_type intercept = {
         
         .name = "intercept",
@@ -177,7 +127,6 @@ static struct target_type intercept = {
         .map = intercept_map,
 };
         
-/*---------Module Functions -----------------*/
 
 static int init_intercept(void)
 {
