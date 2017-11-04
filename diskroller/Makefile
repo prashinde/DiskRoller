@@ -1,6 +1,6 @@
 obj-m += tracker.o
 
-INCDIRS  = $(TOP_DIR)/Logger
+INCDIRS  = $(TOP_DIR)/logger
 INCFLAGS= $(addprefix -I,$(INCDIRS))
 EXTRA_CFLAGS := $(INCFLAGS)
 

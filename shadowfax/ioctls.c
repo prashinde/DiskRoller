@@ -11,6 +11,10 @@
 #include <sys/ioctl.h>		/* ioctl */
 #include <errno.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+
+#define PAGE_SIZE 4096
 unsigned long ioctl_get_changed_sector(int file_desc, unsigned long *sectors_to_read)
 {
 	int i = 0;
@@ -56,8 +60,8 @@ int main()
 {
 	unsigned long sectors_to_read[255];
 	int num_bytes = 0;
-
-	int file_desc = open(DEVICE_FILE_NAME, 0);
+	void *address;
+	int file_desc = open(DEVICE_FILE_NAME, O_RDWR);
 	if (file_desc < 0) {
 		printf("Cant open device:%s", DEVICE_FILE_NAME);
 		exit(-1);
@@ -66,6 +70,14 @@ int main()
 	num_bytes = ioctl_get_changed_sector(file_desc, sectors_to_read);
 
 	read_from_sectors(sectors_to_read, num_bytes);
+
+	address = mmap(NULL, PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, file_desc, 0);
+	if (address == MAP_FAILED) {
+		perror("mmap operation failed");
+		return -1;
+	}
+	printf("\nAccessing a kernel memory:%s", (char *)address);
+	printf("\n"); 
 	close(file_desc);
 	return 0;
 }

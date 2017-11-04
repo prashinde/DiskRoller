@@ -3,9 +3,10 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
+#include<linux/slab.h>
 #include <asm/uaccess.h>
 #include <linux/types.h>
-
+#include <linux/mm.h>
 #include "ioctlhandler.h"
 #include "logger.h"
 
@@ -16,15 +17,27 @@
 /* No two opens at the any time */
 static int num_device_open = 0;
 
+#ifndef VM_RESERVED
+# define  VM_RESERVED   (VM_DONTEXPAND | VM_DONTDUMP)
+#endif
+
+struct mmap_info {
+    char *data;            
+    int reference;      
+};
+
 /* Open the device */
 static int device_open(struct inode *inode, struct file *file)
 {
 
+	struct mmap_info *info = kmalloc(sizeof(struct mmap_info), GFP_KERNEL);    
 	LOG_MSG(INFO, "device_open(%p)\n", file);
-
 	if (num_device_open)
 		return -EBUSY;
-
+	info->data = (char *)get_zeroed_page(GFP_KERNEL);
+	memcpy(info->data, "hello from kernel this is file: ", 32);
+	/* assign this info struct to the file */
+	file->private_data = info;
 	num_device_open++;
 
 	return SUCCESS;
@@ -32,11 +45,13 @@ static int device_open(struct inode *inode, struct file *file)
 
 static int device_release(struct inode *inode, struct file *file)
 {
+	struct mmap_info *info = file->private_data;
 	LOG_MSG(INFO, "device_release(%p,%p)\n", inode, file);
 
-	/* 
-	 * We're now ready for our next caller 
-	 */
+	free_page((unsigned long)info->data);
+	kfree(info);
+	file->private_data = NULL;
+
 	num_device_open--;
 
 	return SUCCESS;
@@ -91,21 +106,59 @@ long device_ioctl(struct file *file,	/* ditto */
 	return 0;
 }
 
-/* Module Declarations */
+ 
+void mmap_open(struct vm_area_struct *vma)
+{
+	struct mmap_info *info = (struct mmap_info *)vma->vm_private_data;
+	info->reference++;
+}
+ 
+void mmap_close(struct vm_area_struct *vma)
+{
+	struct mmap_info *info = (struct mmap_info *)vma->vm_private_data;
+	info->reference--;
+}
+ 
+static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+	struct page *page;
+	struct mmap_info *info;    
 
-/* 
- * This structure will hold the functions to be called
- * when a process does something to the device we
- * created. Since a pointer to this structure is kept in
- * the devices table, it can't be local to
- * init_module. NULL is for unimplemented functions. 
- */
+	info = (struct mmap_info *)vma->vm_private_data;
+	if (!info->data) {
+		printk("No data\n");
+		return 0;
+	}
+
+	page = virt_to_page(info->data);
+	get_page(page);
+	vmf->page = page;
+	return 0;
+}
+
+struct vm_operations_struct mmap_vm_ops = {
+	.open = mmap_open,
+	.close = mmap_close,
+	.fault = mmap_fault,    
+};
+ 
+int device_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	vma->vm_ops = &mmap_vm_ops;
+	vma->vm_flags |= VM_RESERVED;
+	vma->vm_private_data = file->private_data;
+	mmap_open(vma);
+	LOG_MSG(INFO, "YES! MMAP is called:\n");
+	return 0;
+}
+
 struct file_operations Fops = {
 	.read = device_read,
 	.write = device_write,
 	.unlocked_ioctl = device_ioctl,
 	.open = device_open,
 	.release = device_release,	/* a.k.a. close */
+	.mmap = device_mmap,
 };
 
 /* 
@@ -128,16 +181,7 @@ int init_module()
 		return ret_val;
 	}
 
-	LOG_MSG(INFO, "%s The major device number is %d.\n",
-	       "Registeration is a success", MAJOR_NUM);
-	LOG_MSG(INFO, "If you want to talk to the device driver,\n");
-	LOG_MSG(INFO, "you'll have to create a device file. \n");
-	LOG_MSG(INFO, "We suggest you use:\n");
 	LOG_MSG(INFO, "mknod %s c %d 0\n", DEVICE_FILE_NAME, MAJOR_NUM);
-	LOG_MSG(INFO, "The device file name is important, because\n");
-	LOG_MSG(INFO, "the ioctl program assumes that's the\n");
-	LOG_MSG(INFO, "file you'll use.\n");
-
 	return 0;
 }
 

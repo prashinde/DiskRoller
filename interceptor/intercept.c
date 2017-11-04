@@ -21,19 +21,19 @@ static int intercept_map(struct dm_target *ti, struct bio *bio)
         struct dr_dm_target *mdt = (struct dr_dm_target *) ti->private;
 	struct bio_vec   bvl;
 	struct bvec_iter bvi;
-
-        LOG_MSG(CRIT, "\n<<in function intercept_map \n");
+	void *page;
 
         bio->bi_bdev = mdt->dev->bdev;
 
         if(IS_WRITE(bio)) {
 		LOG_MSG(INFO, "Calling hook function");
 		LOG_MSG(INFO, "IO size:%d", bio->bi_vcnt);
-		bitdriver_update_bitmap(bio->bi_iter.bi_sector);
+		//bitdriver_update_bitmap(bio->bi_iter.bi_sector);
 
 		bvi = bio->bi_iter;
 		for_each_bvec(bvl, bio->bi_io_vec, bvi, bvi) {
-			void *page = kmap_atomic(bvl.bv_page);
+			LOG_MSG(INFO, "Device sector number:%lu, %u", bvi.bi_sector, bvi.bi_size);
+			page = kmap_atomic(bvl.bv_page);
 			LOG_MSG(INFO, "Write Paged Data is:%s", (char *)page);
 			kunmap_atomic(page);
 		}
@@ -47,12 +47,10 @@ static int intercept_map(struct dm_target *ti, struct bio *bio)
 			kunmap_atomic(page);
 		}
 	}*/
-        submit_bio(bio);
 
-        LOG_MSG(CRIT, "\n>>out function intercept_map \n");       
+        submit_bio(bio);
         return DM_MAPIO_SUBMITTED;
 }
-
 
 static int 
 intercept_ctr(struct dm_target *ti, unsigned int argc, char **argv)
@@ -95,18 +93,14 @@ intercept_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	LOG_MSG(INFO, "DEvice mapper nmber of sectors = %lu", mdt->dev->bdev->bd_disk->part0.nr_sects);
 
 	/* Init Bitmap function */
-	bitdriver_init_bitmap(mdt->dev->bdev->bd_disk->part0.nr_sects);
+	//bitdriver_init_bitmap(mdt->dev->bdev->bd_disk->part0.nr_sects);
 
-        LOG_MSG(CRIT, "\n>>out function intercept_ctr \n");                       
         return 0;
 
 bad:
         kfree(mdt);
-        LOG_MSG(CRIT, "\n>>out function intercept_ctr with errorrrrrrrrrr \n");           
         return -EINVAL;
 }
-
-
 
 static void intercept_dtr(struct dm_target *ti)
 {

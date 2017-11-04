@@ -1,7 +1,7 @@
 obj-m +=intercept.o
 
-INC1  = $(TOP_DIR)/bitmapdriver/ 
-INC2  = $(TOP_DIR)/Logger
+INC1  = $(TOP_DIR)/diskroller/ 
+INC2  = $(TOP_DIR)/logger
 INCFLAGS = $(addprefix -I,$(INC1))
 INCFLAGS += $(addprefix -I,$(INC2))
 

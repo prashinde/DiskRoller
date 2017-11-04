@@ -4,19 +4,20 @@ function create_device
 {
 	TOP_DIR=$(pwd)/../
 
+	dd if=/dev/urandom of=disk bs=1M count=100
 	losetup /dev/loop0 disk	
 	if [ $? -ne 0 ]; then
 		echo "Unable to setupna loop device"
 		exit -1
 	fi
 
-	insmod $TOP_DIR/bitmapdriver/tracker.ko
+	insmod $TOP_DIR/diskroller/tracker.ko
 	if [ $? -ne 0 ]; then
 		echo "Unable to load bitdriver"
 		exit -1
 	fi
 
-	insmod $TOP_DIR/dmtarget/intercept.ko
+	insmod $TOP_DIR/interceptor/intercept.ko
 	if [ $? -ne 0 ]; then
 		echo "Unable to load interceptor"
 		exit -1
