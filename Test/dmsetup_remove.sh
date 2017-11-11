@@ -26,6 +26,11 @@ function create_device
 	echo "Creating device"
 	echo "echo 0 10000 intercept /dev/loop0 0| dmsetup create intercept"
 	echo 0 10000 intercept /dev/loop0 0| dmsetup create intercept
+
+	echo "Creating secondary disk...."
+	losetup /dev/loop1 copiedfile
+
+	losetup
 }
 
 function release_device

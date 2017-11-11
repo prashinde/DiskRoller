@@ -28,15 +28,17 @@ static int intercept_map(struct dm_target *ti, struct bio *bio)
         if(IS_WRITE(bio)) {
 		LOG_MSG(INFO, "Calling hook function");
 		LOG_MSG(INFO, "IO size:%d", bio->bi_vcnt);
-		//bitdriver_update_bitmap(bio->bi_iter.bi_sector);
 
 		bvi = bio->bi_iter;
+		LOG_MSG(INFO, "*****************\n");
 		for_each_bvec(bvl, bio->bi_io_vec, bvi, bvi) {
-			LOG_MSG(INFO, "Device sector number:%lu, %u", bvi.bi_sector, bvi.bi_size);
+			LOG_MSG(INFO, "Device sector number:%lu,size:%u, index:%u", bvi.bi_sector, bvi.bi_size, bvi.bi_idx);
 			page = kmap_atomic(bvl.bv_page);
-			LOG_MSG(INFO, "Write Paged Data is:%s", (char *)page);
+			LOG_MSG(INFO, "LEm:%u off=%u\n", bvl.bv_len, bvl.bv_offset);
+			bitdriver_update_bitmap(bio->bi_iter.bi_sector, page, bvl.bv_len, bvl.bv_offset);
 			kunmap_atomic(page);
 		}
+		LOG_MSG(INFO, "*****************\n");
 	}
         /*else {
 		LOG_MSG(INFO, "IO size:%d\n", bio->bi_size);
@@ -128,6 +130,7 @@ static int init_intercept(void)
         result = dm_register_target(&intercept);
         if(result < 0)
                 LOG_MSG(CRIT, "\n Error in registering target \n");
+	bitdriver_init_bitmap(100);
         return 0;
 }
 

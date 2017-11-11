@@ -7,9 +7,10 @@
 #include <asm/uaccess.h>
 #include <linux/types.h>
 #include <linux/mm.h>
+#include <linux/vmalloc.h>
 #include "ioctlhandler.h"
 #include "logger.h"
-
+#include "bitdriver.h"
 #define SUCCESS 0
 
 #define DEVICE_NAME "bit_driver"
@@ -17,6 +18,9 @@
 /* No two opens at the any time */
 static int num_device_open = 0;
 
+extern sec_mdata_t global;
+extern void *page_list;
+extern int nr_pages;
 #ifndef VM_RESERVED
 # define  VM_RESERVED   (VM_DONTEXPAND | VM_DONTDUMP)
 #endif
@@ -30,7 +34,7 @@ struct mmap_info {
 static int device_open(struct inode *inode, struct file *file)
 {
 
-	struct mmap_info *info = kmalloc(sizeof(struct mmap_info), GFP_KERNEL);    
+	struct mmap_info *info = vmalloc(sizeof(struct mmap_info));    
 	LOG_MSG(INFO, "device_open(%p)\n", file);
 	if (num_device_open)
 		return -EBUSY;
@@ -49,7 +53,7 @@ static int device_release(struct inode *inode, struct file *file)
 	LOG_MSG(INFO, "device_release(%p,%p)\n", inode, file);
 
 	free_page((unsigned long)info->data);
-	kfree(info);
+	vfree(info);
 	file->private_data = NULL;
 
 	num_device_open--;
@@ -91,19 +95,26 @@ long device_ioctl(struct file *file,	/* ditto */
 		 unsigned int ioctl_num,	/* number and param for ioctl */
 		 unsigned long ioctl_param)
 {
-
-	/*switch (ioctl_num) {
+	mdata_t **ucs;
+	int i;
+	long ret_i = 0;
+	switch (ioctl_num) {
 		case IOCTL_GET_CHANGED_SECTOR:
+		ucs = (mdata_t **)ioctl_param;
+		
+		for (i = 0; i < global.index; i++) {
+			copy_to_user(ucs[i], global.msec[i], sizeof(mdata_t));
+			kfree(global.msec[i]);
+		}
 
-		user_changed_sectors = (sector_t *)ioctl_param;
-		copy_to_user(user_changed_sectors, global_bitmap.changed_sectors, sizeof(sector_t)*(global_bitmap.index));
-		LOG_MSG(INFO, "Changed Sectors:::");
-		for (i=0; i < global_bitmap.index; i++) 
-			LOG_MSG(INFO, " %ld ", global_bitmap.changed_sectors[i]);
+		LOG_MSG(INFO, "Changed Sectors: %d", global.index);
+		ret_i = global.index;
+		global.index = 0;
+		nr_pages = 0;
 		break; 
-	}*/
+	}
 	//return global_bitmap.index;
-	return 0;
+	return ret_i;
 }
 
  
@@ -130,7 +141,12 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		return 0;
 	}
 
-	page = virt_to_page(info->data);
+	LOG_MSG(INFO, "Faulting address:%p\n", (void*)vmf->address);
+	LOG_MSG(INFO, "Faulting Page offset:%ld\n", vmf->pgoff);
+	page = vmalloc_to_page(page_list+((vmf->pgoff)*PAGE_SIZE));
+	LOG_MSG(INFO, "Logical Address:%p\n", (void*)info->data);
+	LOG_MSG(INFO, "Corresponding physical Address:%p\n", (void*)__pa(info->data));
+	LOG_MSG(INFO, "Page address:%p\n", (void*)page);
 	get_page(page);
 	vmf->page = page;
 	return 0;
@@ -148,7 +164,6 @@ int device_mmap(struct file *file, struct vm_area_struct *vma)
 	vma->vm_flags |= VM_RESERVED;
 	vma->vm_private_data = file->private_data;
 	mmap_open(vma);
-	LOG_MSG(INFO, "YES! MMAP is called:\n");
 	return 0;
 }
 
