@@ -10,30 +10,19 @@
 #include <linux/vmalloc.h>
 #include "ioctlhandler.h"
 #include "logger.h"
-#include "bitdriver.h"
-#define SUCCESS 0
+#include "diskroller.h"
+#include "memory.h"
 
 #define DEVICE_NAME "bit_driver"
 
-/* No two opens at the any time */
-static int num_device_open = 0;
-
-extern sec_mdata_t global;
-extern void *page_list;
-extern int nr_pages;
 #ifndef VM_RESERVED
 # define  VM_RESERVED   (VM_DONTEXPAND | VM_DONTDUMP)
 #endif
 
-struct mmap_info {
-    char *data;            
-    int reference;      
-};
-
 /* Open the device */
 static int device_open(struct inode *inode, struct file *file)
 {
-
+#if 0
 	struct mmap_info *info = vmalloc(sizeof(struct mmap_info));    
 	LOG_MSG(INFO, "device_open(%p)\n", file);
 	if (num_device_open)
@@ -43,12 +32,13 @@ static int device_open(struct inode *inode, struct file *file)
 	/* assign this info struct to the file */
 	file->private_data = info;
 	num_device_open++;
-
-	return SUCCESS;
+#endif
+	return 0;
 }
 
 static int device_release(struct inode *inode, struct file *file)
 {
+#if 0
 	struct mmap_info *info = file->private_data;
 	LOG_MSG(INFO, "device_release(%p,%p)\n", inode, file);
 
@@ -57,8 +47,8 @@ static int device_release(struct inode *inode, struct file *file)
 	file->private_data = NULL;
 
 	num_device_open--;
-
-	return SUCCESS;
+#endif
+	return 0;
 }
 
 /* 
@@ -95,11 +85,10 @@ long device_ioctl(struct file *file,	/* ditto */
 		 unsigned int ioctl_num,	/* number and param for ioctl */
 		 unsigned long ioctl_param)
 {
-	mdata_t **ucs;
-	int i;
 	long ret_i = 0;
 	switch (ioctl_num) {
 		case IOCTL_GET_CHANGED_SECTOR:
+#if 0
 		ucs = (mdata_t **)ioctl_param;
 		
 		for (i = 0; i < global.index; i++) {
@@ -112,6 +101,12 @@ long device_ioctl(struct file *file,	/* ditto */
 		global.index = 0;
 		nr_pages = 0;
 		break; 
+		case IOCTL_TEST_IB:
+		dr_alloc_buffer(10);
+		dr_free_buffer();
+#endif
+		break; 
+
 	}
 	//return global_bitmap.index;
 	return ret_i;
@@ -120,18 +115,23 @@ long device_ioctl(struct file *file,	/* ditto */
  
 void mmap_open(struct vm_area_struct *vma)
 {
+#if 0
 	struct mmap_info *info = (struct mmap_info *)vma->vm_private_data;
 	info->reference++;
+#endif
 }
  
 void mmap_close(struct vm_area_struct *vma)
 {
+#if 0
 	struct mmap_info *info = (struct mmap_info *)vma->vm_private_data;
 	info->reference--;
+#endif
 }
  
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
+#if 0
 	struct page *page;
 	struct mmap_info *info;    
 
@@ -149,6 +149,7 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	LOG_MSG(INFO, "Page address:%p\n", (void*)page);
 	get_page(page);
 	vmf->page = page;
+#endif
 	return 0;
 }
 
@@ -205,8 +206,6 @@ int init_module()
  */
 void cleanup_module()
 {
-
 	unregister_chrdev(MAJOR_NUM, DEVICE_NAME);
-
 	LOG_MSG(ALERT, "unregister_chrdev:");
 }

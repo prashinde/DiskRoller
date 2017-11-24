@@ -2,7 +2,7 @@
 #define LOGGER_H
 
 #define INFO	KERN_INFO
-#define ERROR	KERN_ERROR
+#define ERROR	KERN_ERR
 #define CRIT	KERN_CRIT
 #define ALERT	KERN_ALERT
 

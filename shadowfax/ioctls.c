@@ -16,6 +16,16 @@
 #include <sys/mman.h>
 
 #define PAGE_SIZE 4096
+unsigned long ioctl_test_ib(int file_desc, int n)
+{
+	int ret_val = ioctl(file_desc, IOCTL_TEST_IB, n);
+	if (ret_val < 0) {
+		printf("IOCTL failed:%d: %s", errno, strerror(errno));
+		exit(-1);
+	}
+	return 0;
+}
+
 unsigned long ioctl_get_changed_sector(int file_desc, mdata_t **str)
 {
 	int i = 0;
@@ -88,8 +98,9 @@ int main()
 		str[i] = malloc(sizeof(mdata_t));
 	}
 
-	num_bytes = ioctl_get_changed_sector(file_desc, str);
+	//num_bytes = ioctl_get_changed_sector(file_desc, str);
 
+	num_bytes = ioctl_test_ib(file_desc, 10);
 	//read_from_sectors(sectors_to_read, num_bytes);
 
 	printf("\n"); 
