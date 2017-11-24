@@ -17,4 +17,8 @@ struct op_md {
 };
 int dr_alloc_buffer(uint64_t nr_pages);
 int dr_free_buffer(void);
+struct op_md *dr_get_free_md(void);
+int dr_put_ready_list(struct op_md *t);
+int dr_move_ready_mapped(uint32_t n);
+int dr_move_mapped_free(void);
 #endif

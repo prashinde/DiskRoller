@@ -16,42 +16,38 @@ struct dr_dm_target {
 };
 
 #define IS_WRITE(x) op_is_write(bio_op(x))
-static int intercept_map(struct dm_target *ti, struct bio *bio)
+static int
+intercept_map(struct dm_target *ti, struct bio *bio)
 {
-		struct dr_dm_target *mdt = (struct dr_dm_target *) ti->private;
+	struct dr_dm_target *mdt = (struct dr_dm_target *) ti->private;
 	struct bio_vec	 bvl;
 	struct bvec_iter bvi;
 	void *page;
 
-		bio->bi_bdev = mdt->dev->bdev;
+	bio->bi_bdev = mdt->dev->bdev;
 
-		if(IS_WRITE(bio)) {
-		LOG_MSG(INFO, "Calling hook function");
-		LOG_MSG(INFO, "IO size:%d", bio->bi_vcnt);
+	if(IS_WRITE(bio)) {
 
 		bvi = bio->bi_iter;
-		LOG_MSG(INFO, "*****************\n");
 		for_each_bvec(bvl, bio->bi_io_vec, bvi, bvi) {
-			LOG_MSG(INFO, "Device sector number:%lu,size:%u, index:%u", bvi.bi_sector, bvi.bi_size, bvi.bi_idx);
-			page = kmap_atomic(bvl.bv_page);
-			LOG_MSG(INFO, "LEm:%u off=%u\n", bvl.bv_len, bvl.bv_offset);
+		LOG_MSG(INFO, "Device sector number:%lu,size:%u, index:%u", bvi.bi_sector, bvi.bi_size, bvi.bi_idx);
+		page = kmap_atomic(bvl.bv_page);
 			dr_update_entry(bio->bi_iter.bi_sector, page, bvl.bv_len, bvl.bv_offset);
 			kunmap_atomic(page);
 		}
-		LOG_MSG(INFO, "*****************\n");
 	}
-		/*else {
-		LOG_MSG(INFO, "IO size:%d\n", bio->bi_size);
-		LOG_MSG(INFO, "Reading from sector :%lu\n", bio->bi_sector);
-		bio_for_each_segment(bvl, bio, i) {
-			void *page = kmap_atomic(bvl->bv_page);
-			LOG_MSG(INFO, "Read Paged Data is:%s", (char *)page);
-			kunmap_atomic(page);
-		}
-	}*/
+	/*else {
+	LOG_MSG(INFO, "IO size:%d\n", bio->bi_size);
+	LOG_MSG(INFO, "Reading from sector :%lu\n", bio->bi_sector);
+	bio_for_each_segment(bvl, bio, i) {
+		void *page = kmap_atomic(bvl->bv_page);
+		LOG_MSG(INFO, "Read Paged Data is:%s", (char *)page);
+		kunmap_atomic(page);
+	}
+}*/
 
-		submit_bio(bio);
-		return DM_MAPIO_SUBMITTED;
+	submit_bio(bio);
+	return DM_MAPIO_SUBMITTED;
 }
 
 static int 

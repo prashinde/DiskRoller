@@ -18,7 +18,18 @@
 #define PAGE_SIZE 4096
 unsigned long ioctl_test_ib(int file_desc, int n)
 {
-	int ret_val = ioctl(file_desc, IOCTL_TEST_IB, n);
+	/* Mapping Interceptor buffer */
+	int ret_val;
+
+	printf("MApping the IB\n");
+	ret_val = ioctl(file_desc, IOCTL_TEST_MAP_IB, n);
+	if (ret_val < 0) {
+		printf("IOCTL failed:%d: %s", errno, strerror(errno));
+		exit(-1);
+	}
+
+	/* Unmapping interceptor buffer */
+	ret_val = ioctl(file_desc, IOCTL_TEST_UNMAP_IB, n);
 	if (ret_val < 0) {
 		printf("IOCTL failed:%d: %s", errno, strerror(errno));
 		exit(-1);

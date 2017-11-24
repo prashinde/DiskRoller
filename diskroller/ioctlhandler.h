@@ -17,7 +17,8 @@ typedef struct mdata {
  */
 #define IOCTL_GET_CHANGED_SECTOR _IOWR(MAJOR_NUM, 2, unsigned long)
 
-#define IOCTL_TEST_IB _IOWR(MAJOR_NUM, 3, unsigned long)
+#define IOCTL_TEST_MAP_IB _IOWR(MAJOR_NUM, 3, unsigned long)
+#define IOCTL_TEST_UNMAP_IB _IOWR(MAJOR_NUM, 4, unsigned long)
 /* 
  * The name of the device file 
  */

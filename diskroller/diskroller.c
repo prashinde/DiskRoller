@@ -13,27 +13,36 @@
 
 int dr_update_entry(sector_t sector_num, void *page, long len, long offset)
 {
+
+
+	struct op_md *f;
+
+	LOG_MSG(INFO, "Updating the entry");	
+	f = dr_get_free_md();
+	if(f == NULL) {
+		LOG_MSG(CRIT, "IB Overload! Abort");
+		return -ENOMEM;
+	}
+
+	LOG_MSG(INFO, "Adding slot in Ready List");	
+	/* TODO: Perform Updates */
+	uint64_t          oms_seqno;
+	sector_t          oms_sector;
+	unsigned int      oms_off;
+	unsigned int      oms_len;
+
+	f->oms_seqno = 0;
+	f->oms_sector = sector_num;
+	f->oms_len = len;
+	f->oms_off = offset;
+	/* Put it in a ready list */
+	dr_put_ready_list(f);
 #if 0
-	mdata_t *m;
-	LOG_MSG(INFO, "Calling from hooked function..");
-	LOG_MSG(INFO, "Sector number=%lu", sector_num);
-
-	m = kmalloc(sizeof(mdata_t), GFP_KERNEL);
-	if(m == NULL)
-		return ;
-
-	spin_lock(&page_lock);
-	/* Crappy code. memcpy() with spinlock :D */
-	if(nr_pages < 500)
-		memcpy(page_list+(nr_pages*PAGE_SIZE), page, PAGE_SIZE);
-	
-	nr_pages++;
 	m->s = sector_num;
 	m->len = len;
 	m->offset = offset;
 	global.msec[global.index] = m;
 	global.index++;
-	spin_unlock(&page_lock);	
 	LOG_MSG(INFO, "Number of Pages:%d ", nr_pages);
 	//dump_entry();
 #endif
@@ -45,7 +54,7 @@ int dr_init_ib(void)
 {
 	int rc;
 	/* Buffer size should be configurable. */
-	rc = dr_alloc_buffer(10);
+	rc = dr_alloc_buffer(17000);
 	if(rc != 0) {
 		LOG_MSG(ERROR, "Interceptor buffer allocation failed");
 		return rc;

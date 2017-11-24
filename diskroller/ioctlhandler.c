@@ -101,11 +101,14 @@ long device_ioctl(struct file *file,	/* ditto */
 		global.index = 0;
 		nr_pages = 0;
 		break; 
-		case IOCTL_TEST_IB:
-		dr_alloc_buffer(10);
-		dr_free_buffer();
 #endif
-		break; 
+		case IOCTL_TEST_MAP_IB:
+		dr_move_ready_mapped(1);
+		break;
+
+		case IOCTL_TEST_UNMAP_IB:
+		dr_move_mapped_free();
+		break;
 
 	}
 	//return global_bitmap.index;

@@ -22,6 +22,7 @@ struct op_md *dr_get_free_md(void)
 	/* Remove this entry from free list */
 	list_del_init(&free_s->oms_list);
 	spin_unlock(&free_list.oms_lock);
+	LOG_MSG(INFO, "Returning a free page..");
 	return free_s;
 }
 
@@ -31,9 +32,18 @@ struct op_md *dr_get_free_md(void)
  **/
 int dr_put_ready_list(struct op_md *t)
 {
+	struct op_md *tmp;
+	struct list_head *pos;
 	spin_lock(&ready_list.oms_lock);
 	list_add_tail(&(t->oms_list), &(ready_list.oms_list));
 	spin_unlock(&ready_list.oms_lock);
+	LOG_MSG(INFO, "Put page in a ready list page..");
+	
+	LOG_MSG(CRIT, "t->prev:%p t->next:%p\n", t->oms_list.prev, t->oms_list.next);
+	list_for_each(pos, &(ready_list.oms_list)) {
+		tmp = list_entry(pos, struct op_md, oms_list);
+		LOG_MSG(INFO, "Free List:Sequence number:%llu, %p", tmp->oms_pg_id, tmp->oms_page);
+	}
 	return 0;
 }
 
@@ -50,12 +60,14 @@ int dr_move_ready_mapped(uint32_t n)
 	int           i;
 	struct op_md *r;
 
-	spin_lock(&ready_list.oms_lock);
-	for(i = 0; i <= n; i++) {
+	LOG_MSG(INFO, "Moving pages from ready to mapped list");
+	//spin_lock(&ready_list.oms_lock);
+	for(i = 0; i < n; i++) {
 		r = list_first_entry_or_null(&ready_list.oms_list, 
 					      struct op_md, oms_list);
 		if(r == NULL) {
-			spin_unlock(&free_list.oms_lock);
+			LOG_MSG(CRIT, "R is fucking NULL");
+			/*spin_unlock(&ready_list.oms_lock);*/
 			return i;
 		}
 		/* Remove this entry from ready list */
@@ -64,7 +76,8 @@ int dr_move_ready_mapped(uint32_t n)
 		/* Add to mapped list */
 		list_add_tail(&(r->oms_list), &(mapped_list.oms_list));
 	}
-	spin_unlock(&ready_list.oms_lock);
+	//spin_unlock(&ready_list.oms_lock);
+	LOG_MSG(INFO, "ready->mapped success");
 	return i;
 }
 
@@ -76,7 +89,8 @@ int dr_move_mapped_free(void)
 	struct op_md *tmp;
 	struct list_head *pos, *q;
 
-	
+		
+	LOG_MSG(INFO, "Mapped->free");
 	spin_lock(&free_list.oms_lock);
 	list_for_each_safe(pos, q, &(mapped_list.oms_list)) {
 		tmp = list_entry(pos, struct op_md, oms_list);
@@ -86,6 +100,7 @@ int dr_move_mapped_free(void)
 		list_add_tail(&(tmp->oms_list), &(free_list.oms_list));
 	}
 	spin_unlock(&free_list.oms_lock);
+	LOG_MSG(INFO, "Mapped->free succedd");
 	return 0;
 }
 
