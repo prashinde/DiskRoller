@@ -4,11 +4,18 @@
 #include <linux/types.h>
 #include <linux/ioctl.h>
 
-typedef struct mdata {
-	unsigned long s;
-	long len;
-	long offset;
-} mdata_t;
+struct entry {
+	uint64_t     e_pg_id;
+	uint64_t     e_seqno;
+	sector_t     e_sector;
+	unsigned int e_off;
+	unsigned int e_len;
+};
+
+struct mdata {
+	int            md_num;
+	struct entry  *md_ent;
+};
 
 #define MAJOR_NUM 100
 

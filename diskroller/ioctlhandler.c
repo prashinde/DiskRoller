@@ -86,6 +86,8 @@ long device_ioctl(struct file *file,	/* ditto */
 		 unsigned long ioctl_param)
 {
 	long ret_i = 0;
+	void *to_user;
+	struct mdata *ucs;
 	switch (ioctl_num) {
 		case IOCTL_GET_CHANGED_SECTOR:
 #if 0
@@ -103,7 +105,11 @@ long device_ioctl(struct file *file,	/* ditto */
 		break; 
 #endif
 		case IOCTL_TEST_MAP_IB:
-		dr_move_ready_mapped(1);
+		ucs = (struct mdata *)ioctl_param;
+		dr_move_ready_mapped(ucs->md_num);
+		//to_user = read_n_entries(ucs->md_num);
+		to_user = NULL;
+		copy_to_user(ucs->md_ent, to_user, sizeof(*ucs)*ucs->md_num);
 		break;
 
 		case IOCTL_TEST_UNMAP_IB:
@@ -134,25 +140,17 @@ void mmap_close(struct vm_area_struct *vma)
  
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
-#if 0
 	struct page *page;
-	struct mmap_info *info;    
-
-	info = (struct mmap_info *)vma->vm_private_data;
-	if (!info->data) {
-		printk("No data\n");
-		return 0;
-	}
 
 	LOG_MSG(INFO, "Faulting address:%p\n", (void*)vmf->address);
 	LOG_MSG(INFO, "Faulting Page offset:%ld\n", vmf->pgoff);
-	page = vmalloc_to_page(page_list+((vmf->pgoff)*PAGE_SIZE));
+
+	page = vmalloc_to_page(get_page_off(PAGE_NUM(vmf->pgoff)));
 	LOG_MSG(INFO, "Logical Address:%p\n", (void*)info->data);
 	LOG_MSG(INFO, "Corresponding physical Address:%p\n", (void*)__pa(info->data));
 	LOG_MSG(INFO, "Page address:%p\n", (void*)page);
 	get_page(page);
 	vmf->page = page;
-#endif
 	return 0;
 }
 

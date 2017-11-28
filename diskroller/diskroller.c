@@ -25,27 +25,13 @@ int dr_update_entry(sector_t sector_num, void *page, long len, long offset)
 	}
 
 	LOG_MSG(INFO, "Adding slot in Ready List");	
-	/* TODO: Perform Updates */
-	uint64_t          oms_seqno;
-	sector_t          oms_sector;
-	unsigned int      oms_off;
-	unsigned int      oms_len;
-
 	f->oms_seqno = 0;
 	f->oms_sector = sector_num;
 	f->oms_len = len;
 	f->oms_off = offset;
+	memcpy(f->oms_page, page, PAGE_SIZE);
 	/* Put it in a ready list */
 	dr_put_ready_list(f);
-#if 0
-	m->s = sector_num;
-	m->len = len;
-	m->offset = offset;
-	global.msec[global.index] = m;
-	global.index++;
-	LOG_MSG(INFO, "Number of Pages:%d ", nr_pages);
-	//dump_entry();
-#endif
 	return 0;
 }
 EXPORT_SYMBOL(dr_update_entry);
