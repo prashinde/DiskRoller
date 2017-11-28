@@ -160,3 +160,63 @@ int dr_free_buffer(void)
 	}
 	return 0;
 }
+
+void *dr_read_n_entries(int num)
+{
+	struct list_head *pos;
+	void             *mem;
+	struct op_md     *tmp;
+	struct entry     *e;
+
+	mem = kmalloc(sizeof(struct entry)*num, GFP_KERNEL);
+	if(mem == NULL) {
+		LOG_MSG(CRIT, "IB Overflow! Abort!");
+		return mem;
+	}
+
+	e = (struct entry *)mem;
+	list_for_each(pos, &(mapped_list.oms_list)) {
+		tmp = list_entry(pos, struct op_md, oms_list);
+		e->e_pg_id = tmp->oms_pg_id;
+		e->e_seqno = tmp->oms_seqno;
+		e->e_sector = tmp->oms_sector;
+		e->e_off = tmp->oms_off;
+		e->e_len = tmp->oms_len;
+		e = e + sizeof(struct entry);
+	}
+
+	return mem;
+}
+
+void *dr_get_page(pgoff_t pgoff)
+{
+	void             *page;
+	struct op_md     *tmp;
+	struct list_head *pos;
+
+	page = NULL;
+
+	/* Page has to be found in the mapped list */
+	list_for_each(pos, &(mapped_list.oms_list)) {
+		tmp = list_entry(pos, struct op_md, oms_list);
+		if(tmp->oms_pg_id == pgoff) {
+			page = tmp->oms_page;
+			break;
+		}
+	}
+
+	return page;
+}
+
+long dr_get_nr_mapped(void)
+{
+	struct list_head *pos;
+	long              count = 0;
+
+	/* How many pages in ready list? */	
+	list_for_each(pos, &(ready_list.oms_list)) {
+		count++;
+	}
+
+	return count;
+}

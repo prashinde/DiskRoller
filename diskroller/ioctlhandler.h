@@ -1,7 +1,16 @@
-#ifndef BITDRIVER
-#define BITDRIVER
+#ifndef __IOCTL_H_
+#define __IOCTL_H_
 
+#ifndef __KERNEL__
+#define uint32_t unsigned int
+#define uint16_t unsigned short
+#define uint8_t unsigned char
+#define uint64_t unsigned long long
+#define sector_t unsigned long
+#else
 #include <linux/types.h>
+#endif
+
 #include <linux/ioctl.h>
 
 struct entry {
@@ -26,6 +35,7 @@ struct mdata {
 
 #define IOCTL_TEST_MAP_IB _IOWR(MAJOR_NUM, 3, unsigned long)
 #define IOCTL_TEST_UNMAP_IB _IOWR(MAJOR_NUM, 4, unsigned long)
+#define IOCTL_TEST_GET_NR_B _IOWR(MAJOR_NUM, 5, unsigned long)
 /* 
  * The name of the device file 
  */

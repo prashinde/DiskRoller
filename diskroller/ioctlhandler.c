@@ -85,8 +85,10 @@ long device_ioctl(struct file *file,	/* ditto */
 		 unsigned int ioctl_num,	/* number and param for ioctl */
 		 unsigned long ioctl_param)
 {
-	long ret_i = 0;
-	void *to_user;
+	long          ret_i = 0;
+	void         *to_user;
+	long          nr;
+	long         *ul;
 	struct mdata *ucs;
 	switch (ioctl_num) {
 		case IOCTL_GET_CHANGED_SECTOR:
@@ -107,17 +109,21 @@ long device_ioctl(struct file *file,	/* ditto */
 		case IOCTL_TEST_MAP_IB:
 		ucs = (struct mdata *)ioctl_param;
 		dr_move_ready_mapped(ucs->md_num);
-		//to_user = read_n_entries(ucs->md_num);
-		to_user = NULL;
+		to_user = dr_read_n_entries(ucs->md_num);
 		copy_to_user(ucs->md_ent, to_user, sizeof(*ucs)*ucs->md_num);
+		kfree(to_user);
 		break;
 
 		case IOCTL_TEST_UNMAP_IB:
 		dr_move_mapped_free();
 		break;
 
+		case IOCTL_TEST_GET_NR_B:
+		ul = (long *)ioctl_param;
+		nr = dr_get_nr_mapped();
+		copy_to_user(ul, &nr, sizeof(long));
+		break;
 	}
-	//return global_bitmap.index;
 	return ret_i;
 }
 
@@ -141,13 +147,16 @@ void mmap_close(struct vm_area_struct *vma)
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct page *page;
+	void *mpage;
 
 	LOG_MSG(INFO, "Faulting address:%p\n", (void*)vmf->address);
 	LOG_MSG(INFO, "Faulting Page offset:%ld\n", vmf->pgoff);
-
-	page = vmalloc_to_page(get_page_off(PAGE_NUM(vmf->pgoff)));
-	LOG_MSG(INFO, "Logical Address:%p\n", (void*)info->data);
-	LOG_MSG(INFO, "Corresponding physical Address:%p\n", (void*)__pa(info->data));
+	mpage = dr_get_page(vmf->pgoff);
+	if(mpage == NULL) {
+		LOG_MSG(ERROR, "Offset is not found in the mapped range");
+		return -EINVAL;
+	}
+	page = vmalloc_to_page(mpage);
 	LOG_MSG(INFO, "Page address:%p\n", (void*)page);
 	get_page(page);
 	vmf->page = page;

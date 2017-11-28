@@ -3,6 +3,8 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+
+#include "ioctlhandler.h"
 #include "logger.h"
 struct op_md {
 	uint64_t          oms_pg_id;
@@ -21,4 +23,7 @@ struct op_md *dr_get_free_md(void);
 int dr_put_ready_list(struct op_md *t);
 int dr_move_ready_mapped(uint32_t n);
 int dr_move_mapped_free(void);
+void *dr_read_n_entries(int num);
+void *dr_get_page(pgoff_t pgoff);
+long dr_get_nr_mapped(void);
 #endif

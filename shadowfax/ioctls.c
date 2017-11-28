@@ -20,23 +20,62 @@ unsigned long ioctl_test_ib(int file_desc, int n)
 {
 	/* Mapping Interceptor buffer */
 	int ret_val;
+	struct entry *mem;
+	struct mdata md;
+	long nr;
+	int i;
 
-	printf("MApping the IB\n");
-	ret_val = ioctl(file_desc, IOCTL_TEST_MAP_IB, n);
-	if (ret_val < 0) {
-		printf("IOCTL failed:%d: %s", errno, strerror(errno));
-		exit(-1);
+	mem = (struct entry *)malloc(n*sizeof(struct entry));
+	if(mem == NULL) {
+		printf("OVERLOAD!!! Abort");
+		return 0;
 	}
 
+	ret_val = ioctl(file_desc, IOCTL_TEST_GET_NR_B, &nr);
+	if (ret_val < 0) {
+		printf("IOCTL failed:%d: %s", errno, strerror(errno));
+		free(mem);
+		return -1;
+	}
+
+	printf("Number of mapped pages:%ld\n", nr);
+	md.md_num = nr;
+	md.md_ent = mem;
+
+	printf("MApping the IB\n");
+
+	ret_val = ioctl(file_desc, IOCTL_TEST_MAP_IB, &md);
+	if (ret_val < 0) {
+		printf("IOCTL failed:%d: %s", errno, strerror(errno));
+		free(mem);
+		return -1;
+	}
+
+	for(i = 0; i < nr; i++) {
+		printf("Page metadata:");
+		printf("Page id:%llu\n", md.md_ent[i].e_pg_id);
+	}
 	/* Unmapping interceptor buffer */
 	ret_val = ioctl(file_desc, IOCTL_TEST_UNMAP_IB, n);
 	if (ret_val < 0) {
 		printf("IOCTL failed:%d: %s", errno, strerror(errno));
-		exit(-1);
+		free(mem);
+		return -1;
 	}
+	free(mem);
+	
+	ret_val = ioctl(file_desc, IOCTL_TEST_GET_NR_B, &nr);
+	if (ret_val < 0) {
+		printf("IOCTL failed:%d: %s", errno, strerror(errno));
+		free(mem);
+		return -1;
+	}
+
+	printf("Number of mapped pages:%ld\n", nr);
+
 	return 0;
 }
-
+#if 0
 unsigned long ioctl_get_changed_sector(int file_desc, mdata_t **str)
 {
 	int i = 0;
@@ -93,9 +132,9 @@ void read_from_sectors(unsigned long *sectors_to_read, int num_bytes)
 
 	close(dev_fd);
 }
+#endif
 int main()
 {
-	mdata_t *str[500];
 	int num_bytes = 0;
 	int i;
 	void *address;
@@ -103,10 +142,6 @@ int main()
 	if (file_desc < 0) {
 		printf("Cant open device:%s:%d\n", DEVICE_FILE_NAME, errno);
 		exit(-1);
-	}
-
-	for(i = 0; i < 500; i++) {
-		str[i] = malloc(sizeof(mdata_t));
 	}
 
 	//num_bytes = ioctl_get_changed_sector(file_desc, str);

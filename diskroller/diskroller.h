@@ -1,5 +1,5 @@
-#ifndef BITMAP_DATA
-#define BITMAP_DATA
+#ifndef __DR_H_
+#define __DR_H_
 
 #include "ioctlhandler.h"
 #include <linux/types.h>
